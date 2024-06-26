@@ -1,3 +1,24 @@
+#############
+### Notes ###
+#############
+# This dockerfile is already built and can be fetched with "docker pull shaysmith/rtems-cfs:latest".
+# The cFS executable is located in /usr/src/cFS/build/exe/cpu1 as core-cpu1.exe.
+# core-cpu1.exe can be converted into a hex file with "arm-rtems6-objcopy -O ihex core-cpu1.exe core-cpu1.hex".
+# core-cpu1.exe is an ELF executable file. It can be built as an ELF relocatable file by adding the following line:
+    # "target_link_options(core-${TGTNAME} PRIVATE -Wl,-r)" to /usr/src/cFS/cfe/cmake/target/CMakeLists.txt at line 138
+# The startup file cfe_es_startup.scr, the app object files, and the app tables are located in /usr/src/cFS/build/exe/cpu1/eeprom.
+
+#################################
+### Questions and future work ###
+#################################
+# How does the rtems provided filesystem functionality work?
+    # See the files in /usr/src/cFS/osal/src/bsp/generic-rtems/src and /usr/src/cFS/osal/src/os/rtems/src
+# What is the rtems6 provided shell and cmdline functionality?
+    # See the files in /usr/src/cFS/osal/src/bsp/generic-rtems/src and /usr/src/cFS/osal/src/os/rtems/src
+# the apps are meant to be dynamically linked, at runtime, from the filesystem. How to do this?
+# Is there a way to statically link the apps instead, to have just one executable for the entire program?
+# Is there a way to specify exactly what goes into each memory region? For example, interrupts in intsram and applications in eram?
+
 #########################
 ### Setup environment ###
 #########################
