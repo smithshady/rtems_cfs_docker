@@ -3,10 +3,18 @@
 #############
 # This dockerfile is already built and can be fetched with "docker pull shaysmith/rtems-cfs:latest".
 # The cFS executable is located in /usr/src/cFS/build/exe/cpu1 as core-cpu1.exe.
+# The cFS executable loads apps at runtime (on boot) from the filesystem. The apps to load are specified in 
+    # /usr/src/cFS/sample_defs/cpu1_cfe_es_startup.scr and /usr/src/cFS/sample_defs/targets.cmake
+# Two of the default apps, ci_lab and to_lab, revolve around telemetry over a UDP/IP port.
+    # The cFS repository built in this dockerfile does not support networking, however.
+# A networking stack can be obtained by installing rtems-libbsd, however, it was unable
+    # to be installed due to the linker error "cannot move location counter backwards".
+# The linker error "cannot move location counter backwards" means the program needs more RAM than is available. 
+    # The linkcmds and linkcmds.memory files were edited to include external MRAM for the cFS build.
+    # rtems-libbsd was still unable to build even after the inclusion of external MRAM.
 # core-cpu1.exe can be converted into a hex file with "arm-rtems6-objcopy -O ihex core-cpu1.exe core-cpu1.hex".
 # core-cpu1.exe is an ELF executable file. It can be built as an ELF relocatable file by adding the following line:
     # "target_link_options(core-${TGTNAME} PRIVATE -Wl,-r)" to /usr/src/cFS/cfe/cmake/target/CMakeLists.txt at line 138
-# The startup file cfe_es_startup.scr, the app object files, and the app tables are located in /usr/src/cFS/build/exe/cpu1/eeprom.
 
 #################################
 ### Questions and future work ###
@@ -15,9 +23,8 @@
     # See the files in /usr/src/cFS/osal/src/bsp/generic-rtems/src and /usr/src/cFS/osal/src/os/rtems/src
 # What is the rtems6 provided shell and cmdline functionality?
     # See the files in /usr/src/cFS/osal/src/bsp/generic-rtems/src and /usr/src/cFS/osal/src/os/rtems/src
-# the apps are meant to be dynamically linked, at runtime, from the filesystem. How to do this?
-# Is there a way to statically link the apps instead, to have just one executable for the entire program?
-# Is there a way to specify exactly what goes into each memory region? For example, interrupts in intsram and applications in eram?
+# Is there a way to specify exactly what goes into each memory region? Ex: interrupts in intsram and applications in external MRAM?
+# How can we integrate our existing ground station functionality into cFS? Do we need a networking stack (rtems-libbsd)?
 
 #########################
 ### Setup environment ###
@@ -28,7 +35,7 @@ RUN apt-get update \
     build-essential cmake \
     vim git sudo wget tar \
     bison flex texinfo pkg-config \
-    unzip xz-utils lzop bsdmainutils \
+    unzip xz-utils lzop bsdmainutils file \
     device-tree-compiler u-boot-tools libexpat1-dev \
     python3 python3-dev libpython3-dev python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
@@ -81,10 +88,13 @@ RUN cd /usr/src && \
 ######################################
 ### Clone CFS repository and build ###
 ######################################
-# This fork of the nasa cFS repository includes an arm-atsamv-rtems6 toolchain and
-# has networking functionality removed from the osal and psp. The networking code
-# breaks the build unless rtems-libbsd is installed. rtems-libsd was unable to be installed
-# because of memory limitations.
+# This fork of the nasa cFS repository includes an arm-atsamv-rtems6 toolchain and has networking functionality 
+# removed from the osal and psp. The networking code breaks the build unless rtems-libbsd is installed.
+# psp: fsw/pc-rtems/src/cfe_psp_start.c --> commented out networking code
+# osal: src/os/rtems/CMakeLists.txt --> added set(OSAL_CONFIG_INCLUDE_NETWORK FALSE) and set(RTEMS_NO_CMDLINE TRUE)
+# USE THIS REPOSITORY FOR DEVELOPMENT: https://bitbucket.lunaroutpost.com/projects/ROV/repos/rtems_cfs/browse
+    # can't clone bitbucket repositories from a dockerfile because bitbucket only supports ssh
+    # delete the cFS directory created and follow the steps below using the bitbucket repository instead
 RUN cd /usr/src && \
     git clone https://github.com/smithshady/cFS.git cFS && \
     cd /usr/src/cFS && \
